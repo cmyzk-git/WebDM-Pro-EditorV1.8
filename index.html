@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebDM Pro Editor v1.8.5 - Fixed API Integration</title>
+    <title>WebDM Pro Editor v1.8.5.1 - Professional Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
@@ -32,7 +32,7 @@
                     </svg>
                     WebDM Professional Suite
                 </h1>
-                <span class="text-[10px] bg-indigo-700 px-2 py-0.5 rounded text-indigo-200 border border-indigo-500">v1.8.5</span>
+                <span class="text-[10px] bg-indigo-700 px-2 py-0.5 rounded text-indigo-200 border border-indigo-500">v1.8.5.1</span>
             </div>
             <div class="flex items-center gap-4">
                 <div id="statusBadge" class="hidden flex items-center gap-2 text-xs bg-indigo-500 px-4 py-2 rounded-full">
@@ -41,7 +41,7 @@
                         <span class="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
                         <span class="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
                     </span>
-                    <span>AIがドラフトを生成中...</span>
+                    <span id="statusText">AIがドラフトを生成中...</span>
                 </div>
                 <button id="resetAllBtn" class="text-xs bg-red-500/20 hover:bg-red-500 text-red-100 px-3 py-1 rounded transition-colors border border-red-500/30">
                     全てリセット
@@ -54,7 +54,7 @@
         
         <aside class="lg:col-span-3 space-y-6">
             <!-- 作成履歴 -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-[200px]">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-[300px]">
                 <div class="bg-slate-50 p-3 border-b flex justify-between items-center">
                     <h2 class="text-sm font-bold text-slate-700">作成履歴</h2>
                     <span id="versionCount" class="text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">0</span>
@@ -85,7 +85,7 @@
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
                         <label class="block text-xs font-bold text-slate-500">画像アセット（画像 or URL）</label>
-                        <span class="text-[9px] text-slate-400">複数追加可</span>
+                        <span id="assetCountLabel" class="text-[9px] text-slate-400">最大3個まで</span>
                     </div>
                     <div id="assetContainer" class="space-y-3"></div>
                     <button id="addAssetBtn" class="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 text-[10px] hover:border-indigo-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1">
@@ -100,14 +100,15 @@
                 <div class="space-y-3">
                     <label class="block text-xs font-bold text-slate-500">デザインスタイル</label>
                     <select id="toneSelect" class="w-full p-2 border border-slate-300 rounded-md text-xs">
-                        <option value="formal">フォーマル（信頼重視）</option>
-                        <option value="trust">トラスト（誠実・堅実）</option>
-                        <option value="energetic">エネルギッシュ（期待感）</option>
-                        <option value="elegant">エレガント（高級感）</option>
-                        <option value="modern">モダン（洗練・シンプル）</option>
-                        <option value="friendly">フレンドリー（親しみやすさ）</option>
-                        <option value="alert">アラート（緊急・ニュース）</option>
-                        <option value="minimal">ミニマル（決裁者向け）</option>
+                        <!-- P3-13: title属性による説明追加 -->
+                        <option value="formal" title="法人向け資料。信頼感・堅実さを重視">フォーマル（信頼重視）</option>
+                        <option value="trust" title="堅牢さと信頼性を強調。金融・保険向け">トラスト（誠実・堅実）</option>
+                        <option value="energetic" title="期待感・ワクワク感。キャンペーン向け">エネルギッシュ（期待感）</option>
+                        <option value="elegant" title="高級感・プレミアム感。ハイエンド向け">エレガント（高級感）</option>
+                        <option value="modern" title="洗練・シンプル。ベンチャー・デザイン向け">モダン（洗練・シンプル）</option>
+                        <option value="friendly" title="親しみやすさ。BtoCキャンペーン向け">フレンドリー（親しみやすさ）</option>
+                        <option value="alert" title="緊急・ニュース。速報・キャンペーン終了向け">アラート（緊急・ニュース）</option>
+                        <option value="minimal" title="シンプル。決裁者・CEO向け">ミニマル（決裁者向け）</option>
                     </select>
                 </div>
                 
@@ -164,13 +165,25 @@
 
     <script>
         /**
-         * WebDM Pro Editor v1.8.5
-         * - Fixed: API Key integration and response parsing
-         * - Fixed: Exponential backoff for reliability
+         * WebDM Pro Editor v1.8.5.1
+         * P1-P3修正パッチ適用済み
          */
 
-        const apiKey = ""; // Runtime automatically provides key
+        const apiKey = ""; 
         const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
+        const CONFIG = {
+            MAX_FILE_SIZE: 20 * 1024 * 1024,
+            MAX_HISTORY: 10,
+            MAX_ASSETS: 3, // P1-4: 最大3個
+            STORAGE_KEY: 'webdm_v1.8.5'
+        };
+
+        const ERROR_MESSAGES = {
+            'network': 'ネットワーク接続エラーです。インターネット接続を確認してください。',
+            'api_quota': 'APIの使用制限に達しました。しばらく待ってから再試行してください。',
+            'invalid_input': '入力形式に問題があります。テキストや画像を確認してください。',
+            'unknown': '予期しないエラーが発生しました。時間を置いて再度お試しください。'
+        };
 
         let assets = [];
         let versions = []; 
@@ -185,6 +198,7 @@
         const addAssetBtn = document.getElementById('addAssetBtn');
         const assetFileInput = document.getElementById('assetFileInput');
         const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
         const outputSection = document.getElementById('outputSection');
         const previewIframe = document.getElementById('previewIframe');
         const htmlOutput = document.getElementById('htmlOutput');
@@ -194,74 +208,76 @@
         const fileInput = document.getElementById('fileInput');
         const strengthSlider = document.getElementById('strengthSlider');
         const strengthValue = document.getElementById('strengthValue');
+        const refinePanel = document.getElementById('refinePanel');
 
         strengthSlider.oninput = (e) => strengthValue.innerText = `忠実度: ${e.target.value}%`;
 
+        // P2-12: フィードバック時間延長 (3秒)
         window.copyToClipboard = (id) => {
             const el = document.getElementById(id);
             el.select();
             document.execCommand('copy');
             const toast = document.getElementById('toast');
+            toast.innerText = 'コピーしました';
             toast.style.opacity = '1';
-            setTimeout(() => toast.style.opacity = '0', 2000);
+            setTimeout(() => toast.style.opacity = '0', 3000);
         };
 
+        function showNotification(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 3000);
+        }
+
+        // P1-4: 画像のみ送信しテキストは情報に統合
         function buildAssetInfoText() {
             if (assets.length === 0) return "";
             return "【提供される画像アセット】\n" +
                 assets.map((a, idx) => {
-                    const hasImage = a.base64 ? "✓画像データあり" : "✗画像データなし";
-                    const hasUrl = a.url ? `✓本番URL: ${a.url}` : "✗本番URLなし（プレースホルダーを使用）";
-                    return `アセット${idx + 1}:\n  説明: ${a.description || "未入力"}\n  データ: ${hasImage}\n  設定: ${hasUrl}`;
+                    const hasUrl = a.url ? `✓本番URL: ${a.url}` : "✗本番URLなし（<img>生成不可）";
+                    return `アセット${idx + 1}: 説明[${a.description || "なし"}] / 設定[${hasUrl}]`;
                 }).join("\n");
         }
 
-        function getSystemPrompt() {
-    return `あなたは、BtoBマーケティングに精通した、到達率と可読性を極限まで高めたHTMLメール（WebDM）の専門家です。
-以下の【WebDM作成憲法】を最優先の基準として厳守してください。
+        function getSystemPrompt(strength = 80) {
+            return `あなたは、BtoBマーケティングに精通したHTMLメール専門家です。修正忠実度は ${strength}% です。
+【WebDM作成憲法】
+1. ハイブリッド設計: ボタン直下にURLテキスト併記。
+2. 画像管理: 本番URLがある場合のみ<img>タグを生成。プレースホルダー禁止。
+3. テキスト版: HTMLと同じ順序。
+4. 技術制約: Outlook対応（table構造のみ、CSSインライン）。
+必ずJSON形式 { "html": "...", "text": "..." } で回答してください。`;
+        }
 
-【WebDM作成憲法 - 絶対遵守事項】
-
-1. ハイブリッド設計（フォールバック）の徹底:
-   - すべてのボタン（CTA）の直下には、必ずURL（https://...）をテキストとして併記すること。
-   - HTMLが拒否された環境（テキスト形式）でも、情報の優先順位が伝わる構成にすること。
-
-2. 画像アセットの厳密な管理:
-   - ユーザーから提供された「画像URL」が存在する場合のみ、その「画像説明」とセットで配置すること。
-   - 画像URLが提供されていない場合（説明文のみなど）は、画像を一切挿入しないこと。
-     プレースホルダー（placehold.jp等）の使用は禁止。
-   - 提供されたURLをそのまま使用し、変更やプレースホルダー置換は禁止。
-   - 画像には必ずユーザー提供の説明文を alt属性 に設定すること。
-   - 画像の width は最大600pxに制限し、width属性を必ず指定すること。
-
-3. テキスト版の同時生成:
-   - HTML版と全く同じ情報量・情報順序を持つ「テキスト形式」を必ず作成すること。
-   - テキスト版にも提供されたURLをすべて含めること。
-
-4. Outlook/モバイルの最適化:
-   - レイアウトは「100% Tableレイアウト」で構成し、divやflexboxを使用しないこと。
-   - ボタンの背景色は <td> に設定し、<a> タグには display:block; padding を指定してクリック領域を確保すること。
-   - CSSはすべてインライン（style属性）で記述すること。
-
-【修正時の重要ルール】
-現在の修正忠実度は「\${strength}%」です。
-
-強度 80-100%：指示内容のみを最小限の範囲で修正。既存の画像配置・レイアウト構造は変更しない。
-強度 40-79%：指示内容を中心に改善。構成・画像配置は柔軟に調整可能。
-強度 0-39%：全体的により良いDMに再構築。画像配置位置の変更も可能。
-
-【出力形式】
-必ず以下のJSON形式のみで回答してください。他の説明文は一切不要です。
-{ "html": "...", "text": "..." }`;
-}
-
-        // Asset Management Functions
+        // --- Asset Management ---
         addAssetBtn.addEventListener('click', () => {
-            assets.push({ id: Date.now(), base64: null, description: "", url: "", mime: null });
+            // P1-4: クリックハンドラ制限
+            if (assets.length >= CONFIG.MAX_ASSETS) {
+                return;
+            }
+            assets.push({ id: Date.now(), base64: null, description: "", url: "", mime: null, size: 0 });
             renderAssets();
         });
 
         function renderAssets() {
+            // P1-4: レンダリング前検証
+            if (assets.length > CONFIG.MAX_ASSETS) {
+                alert(`画像アセットは最大${CONFIG.MAX_ASSETS}個までです`);
+                assets = assets.slice(0, CONFIG.MAX_ASSETS);
+            }
+            
+            // ボタンのUI更新
+            if (assets.length >= CONFIG.MAX_ASSETS) {
+                addAssetBtn.disabled = true;
+                addAssetBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                addAssetBtn.title = `最大${CONFIG.MAX_ASSETS}個までです`;
+            } else {
+                addAssetBtn.disabled = false;
+                addAssetBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                addAssetBtn.title = '';
+            }
+
             assetContainer.innerHTML = '';
             assets.forEach(asset => {
                 const div = document.createElement('div');
@@ -275,12 +291,12 @@
                             <input type="text" placeholder="画像の説明（AI用）" value="${asset.description}" 
                                    class="w-full text-[10px] p-1.5 border border-slate-300 rounded outline-none"
                                    onchange="updateAsset(${asset.id}, 'description', this.value)">
-                            <input type="text" placeholder="本番用URL（任意）" value="${asset.url}" 
+                            <input type="text" placeholder="表示用URL（任意）" value="${asset.url}" 
                                    class="w-full text-[10px] p-1.5 border border-indigo-200 bg-indigo-50/50 rounded outline-none"
                                    onchange="updateAsset(${asset.id}, 'url', this.value)">
                         </div>
                     </div>
-                    <button onclick="removeAsset(${asset.id})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">✕</button>
+                    <button onclick="removeAsset(${asset.id})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm hover:bg-red-600">✕</button>
                 `;
                 assetContainer.appendChild(div);
             });
@@ -290,23 +306,38 @@
         assetFileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (!file) return;
+            if (file.size > CONFIG.MAX_FILE_SIZE) {
+                alert(`ファイルサイズが20MBを超えています`);
+                return;
+            }
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const asset = assets.find(a => a.id === activeAssetIdForFile);
                 if (asset) { 
                     asset.base64 = ev.target.result.split(',')[1]; 
                     asset.mime = file.type; 
+                    asset.size = file.size;
                     renderAssets(); 
                 }
             };
             reader.readAsDataURL(file);
         };
         window.updateAsset = (id, k, v) => { const a = assets.find(x => x.id === id); if(a) a[k] = v; };
-        window.removeAsset = (id) => { assets = assets.filter(x => x.id !== id); renderAssets(); };
+        
+        // P3-10: 削除確認追加
+        window.removeAsset = (id) => { 
+            if (confirm('このアセットを削除しますか？')) {
+                assets = assets.filter(x => x.id !== id); 
+                renderAssets(); 
+            }
+        };
 
-        // File Selection Logic
         const handleFile = (file) => {
             if (!file) return;
+            if (file.size > CONFIG.MAX_FILE_SIZE) {
+                alert(`資料ファイルが20MBを超えています`);
+                return;
+            }
             const reader = new FileReader();
             reader.onload = (ev) => {
                 attachedFileBase64 = ev.target.result.split(',')[1];
@@ -336,8 +367,16 @@
             fileInput.value = '';
         };
 
-        // --- Core API Logic ---
-        async function callGemini(parts, isJson = true) {
+        // --- API & Process ---
+        // P1-5: エラー分類
+        function classifyError(e) {
+            if (e.message.includes('429')) return 'api_quota';
+            if (e.message.includes('fetch')) return 'network';
+            if (e.message.includes('JSON')) return 'invalid_input';
+            return 'unknown';
+        }
+
+        async function callGemini(parts, strength = 80) {
             let retries = 5;
             for (let i = 0; i < retries; i++) {
                 try {
@@ -346,14 +385,13 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: parts }],
-                            systemInstruction: { parts: [{ text: getSystemPrompt() }] },
-                            generationConfig: isJson ? { responseMimeType: "application/json" } : {}
+                            systemInstruction: { parts: [{ text: getSystemPrompt(strength) }] },
+                            generationConfig: { responseMimeType: "application/json" }
                         })
                     });
 
                     if (response.status === 429 || response.status >= 500) {
-                        const delay = Math.pow(2, i) * 1000;
-                        await new Promise(r => setTimeout(r, delay));
+                        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
                         continue;
                     }
 
@@ -369,127 +407,143 @@
         async function processRequest(isRefinement = false) {
             const baseInfo = document.getElementById('eventInput').value.trim();
             const tone = document.getElementById('toneSelect').value;
-            const strength = strengthSlider.value;
             const feedback = document.getElementById('refineInput').value.trim();
+            const strength = parseInt(strengthSlider.value);
 
             if (!isRefinement && !baseInfo && assets.length === 0 && !attachedFileBase64) {
-                alert("情報が不足しています。テキストまたは資料を入力してください。");
+                alert("作成に必要な情報を入力してください。");
                 return;
             }
 
-           statusBadge.classList.remove('hidden');
-generateBtn.disabled = true; refineBtn.disabled = true;
+            // P2-7 & P2-8: UI状態の制御
+            statusBadge.classList.remove('hidden');
+            statusText.innerText = isRefinement ? "修正案を反映中..." : "AIがドラフトを生成中...";
+            generateBtn.disabled = true;
+            generateBtn.textContent = '作成中...';
+            refineBtn.disabled = true;
+            refineBtn.textContent = '修正中...';
+            
+            // 出力エリアをリセット中として視覚化
+            outputSection.classList.add('opacity-40', 'pointer-events-none');
+            if (!isRefinement) refinePanel.classList.add('hidden');
 
-try {
-    const parts = [];
-    
-    // ===== FIXED: parts 構築ロジック =====
-    if (isRefinement) {
-        parts.push({ 
-            text: `【修正指示】\n指示: ${feedback}\n強度: ${strength}%\n現在のHTML:\n${htmlOutput.value}` 
-        });
-    } else {
-        // Step 1: 基本情報
-        parts.push({ 
-            text: `【新規案件作成】\nトーン: ${tone}\n要旨: ${baseInfo}` 
-        });
+            try {
+                const parts = [];
+                if (isRefinement) {
+                    parts.push({ text: `【修正依頼】\n指示: ${feedback}\n現在のHTML:\n${htmlOutput.value}` });
+                } else {
+                    parts.push({ text: `【新規作成】\nスタイル: ${tone}\n要件: ${baseInfo}` });
+                    if (attachedFileBase64) {
+                        parts.push({ text: "【参考資料データ】" });
+                        parts.push({ inlineData: { mimeType: attachedFileMime, data: attachedFileBase64 } });
+                    }
+                    // P1-4: テキスト説明をアセット情報として統合
+                    const assetInfo = buildAssetInfoText();
+                    if (assetInfo) parts.push({ text: assetInfo });
+                    
+                    // 画像データのみを送信
+                    assets.filter(a => a.base64).forEach((a, i) => {
+                        parts.push({ inlineData: { mimeType: a.mime, data: a.base64 } });
+                    });
+                }
 
-        // Step 2: アセット情報（テキスト）
-        const assetInfo = buildAssetInfoText();
-        if (assetInfo) {
-            parts.push({ text: assetInfo });
+                const resultText = await callGemini(parts, strength);
+                const res = JSON.parse(resultText);
+
+                const ver = { id: Math.random().toString(36).substr(2, 5), html: res.html, text: res.text, tone };
+                saveVersionToState(ver);
+
+                if (isRefinement) document.getElementById('refineInput').value = '';
+
+            } catch (e) {
+                // P1-5: 日本語エラーメッセージ
+                const errorType = classifyError(e);
+                const userMsg = ERROR_MESSAGES[errorType];
+                console.error('[Debug API Error]', e);
+                
+                if (confirm(`${userMsg}\n\n再試行しますか？`)) {
+                    processRequest(isRefinement);
+                }
+            } finally {
+                statusBadge.classList.add('hidden');
+                generateBtn.disabled = false;
+                generateBtn.textContent = '新規案を作成';
+                refineBtn.disabled = false;
+                refineBtn.textContent = '指定の条件で修正';
+            }
         }
 
-        // Step 3: 資料ファイル
-        if (attachedFileBase64) {
-            parts.push({ 
-                text: "\n【営業資料】"
-            });
-            parts.push({ 
-                inlineData: { mimeType: attachedFileMime, data: attachedFileBase64 } 
-            });
+        function saveVersionToState(ver) {
+            versions.push(ver);
+            try {
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(versions));
+            } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                    versions = versions.slice(-CONFIG.MAX_HISTORY);
+                    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(versions));
+                }
+            }
+            loadVersion(ver.id);
         }
 
-        // Step 4: 各アセットの詳細（説明 → 画像の順）
-        assets.filter(a => a.base64).forEach((a, i) => {
-            parts.push({
-                text: `\n【アセット${i+1}】\n説明: ${a.description}\nURL: ${a.url || "未指定"}`
-            });
-            parts.push({
-                inlineData: { mimeType: a.mime, data: a.base64 }
-            });
-        });
-    }
-    // ===== ここまで =====
-    
-    const resultText = await callGemini(parts);
-    
-    // JSON解析の厳密な検証
-    if (!resultText) {
-        throw new Error("APIレスポンスが空です");
-    }
-    
-    let res;
-    try {
-        res = JSON.parse(resultText);
-    } catch (parseErr) {
-        throw new Error("APIがJSONを返しませんでした: " + resultText.substring(0, 100));
-    }
-
-    if (!res.html || !res.text) {
-        throw new Error("生成結果にHTMLまたはテキストが含まれていません");
-    }
-
-    // バージョン保存と表示
-    const ver = { 
-        id: Math.random().toString(36).substr(2, 5), 
-        html: res.html, 
-        text: res.text, 
-        tone 
-    };
-    versions.push(ver);
-    localStorage.setItem('webdm_v1.8.5', JSON.stringify(versions));
-    loadVersion(ver.id);
-
-    if (isRefinement) {
-        document.getElementById('refineInput').value = '';
-    }
-
-} catch (e) {
-    console.error(e);
-    alert(`エラーが発生しました: ${e.message}`);
-} finally {
-    statusBadge.classList.add('hidden');
-    generateBtn.disabled = false;
-    refineBtn.disabled = false;
-}
-}
-
-function loadVersion(id) {
-    currentVersionId = id;
-    const v = versions.find(v => v.id === id);
-    if (v) {
-        htmlOutput.value = v.html;
-        textOutput.value = v.text;
-        const blob = new Blob([v.html], { type: 'text/html' });
-        previewIframe.src = URL.createObjectURL(blob);
-        outputSection.classList.remove('opacity-40', 'pointer-events-none');
-        document.getElementById('refinePanel').classList.remove('hidden');
-        renderHistory();
-    }
-}
+        function loadVersion(id) {
+            currentVersionId = id;
+            const v = versions.find(v => v.id === id);
+            if (v) {
+                htmlOutput.value = v.html;
+                textOutput.value = v.text;
+                const blob = new Blob([v.html], { type: 'text/html' });
+                
+                // P2-9: セキュリティ強化
+                previewIframe.sandbox = 'allow-same-origin';
+                previewIframe.src = URL.createObjectURL(blob);
+                
+                outputSection.classList.remove('opacity-40', 'pointer-events-none');
+                refinePanel.classList.remove('hidden');
+                renderHistory();
+            }
+        }
 
         function renderHistory() {
             historyList.innerHTML = '';
             document.getElementById('versionCount').innerText = versions.length;
             versions.slice().reverse().forEach(v => {
                 const div = document.createElement('div');
-                div.className = `p-2 text-xs border rounded cursor-pointer ${currentVersionId === v.id ? 'bg-indigo-50 border-indigo-400 font-bold' : 'bg-white'}`;
-                div.onclick = () => loadVersion(v.id);
-                div.innerText = `案 #${v.id} (${v.tone})`;
+                div.className = `p-2 text-[11px] border rounded cursor-pointer transition-all flex items-center justify-between group ${currentVersionId === v.id ? 'bg-indigo-50 border-indigo-400 font-bold' : 'bg-white hover:bg-slate-50 border-slate-200'}`;
+                
+                const label = document.createElement('span');
+                label.innerText = `案 #${v.id} (${v.tone})`;
+                label.onclick = () => loadVersion(v.id);
+                label.className = "flex-1";
+
+                // P3-11: 個別削除ボタン
+                const delBtn = document.createElement('button');
+                delBtn.innerHTML = '✕';
+                delBtn.className = "ml-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1";
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteVersion(v.id);
+                };
+
+                div.appendChild(label);
+                div.appendChild(delBtn);
                 historyList.appendChild(div);
             });
         }
+
+        // P3-11: 削除関数
+        window.deleteVersion = (id) => {
+            if (confirm('この版を削除しますか？')) {
+                versions = versions.filter(v => v.id !== id);
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(versions));
+                if (currentVersionId === id) {
+                    if (versions.length > 0) loadVersion(versions[versions.length-1].id);
+                    else location.reload();
+                } else {
+                    renderHistory();
+                }
+            }
+        };
 
         const tabBtns = document.querySelectorAll('.tab-btn');
         tabBtns.forEach(btn => {
@@ -505,19 +559,36 @@ function loadVersion(id) {
         });
 
         window.onload = () => {
-            const s = localStorage.getItem('webdm_v1.8.5') || localStorage.getItem('webdm_v1.8.4');
+            const s = localStorage.getItem(CONFIG.STORAGE_KEY);
             if (s) { 
                 try {
                     versions = JSON.parse(s); 
                     if (versions.length) loadVersion(versions[versions.length-1].id);
                 } catch(e) {}
             }
+            renderAssets();
         };
 
         generateBtn.onclick = () => processRequest(false);
-        refineBtn.onclick = () => processRequest(true);
+        
+        // P1-6: 修正指示時の確認
+        refineBtn.onclick = () => {
+            const feedback = document.getElementById('refineInput').value.trim();
+            if (!feedback) {
+                alert('修正指示を入力してください');
+                return;
+            }
+            const ok = confirm('修正指示を送信します。現在のHTMLを基準に修正されます。\n（手動で行った直接編集は反映されない場合があります）\nよろしいですか？');
+            if (ok) processRequest(true);
+        };
+
         document.getElementById('resetAllBtn').onclick = () => { 
-            if(confirm('全ての履歴を消去しますか？')) { localStorage.clear(); location.reload(); } 
+            // P2-7: リセット時に確実にパネルを隠す
+            if(confirm('全ての履歴を消去しますか？')) { 
+                localStorage.removeItem(CONFIG.STORAGE_KEY); 
+                refinePanel.classList.add('hidden');
+                location.reload(); 
+            } 
         };
     </script>
 </body>
